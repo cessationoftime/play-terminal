@@ -25,15 +25,15 @@ import scala.util.Properties
 import org.fusesource.jansi.AnsiOutputStream
 import org.fusesource.jansi.WindowsAnsiOutputStream
 import java.io.File
+import playterminal.core.NettyServer2
 
 object Console {
   private var installed = 0;
   private var lock: AnyRef = new Object();
 
   private val nettyServer = {
-    import play.core.server.NettyServer._
     val app = Option(System.getProperty("user.dir")).map(new File(_)).filter(p => p.exists && p.isDirectory).flatMap { applicationPath =>
-      createServer(applicationPath)
+      NettyServer2.createServer(applicationPath)
     }
     app.getOrElse(System.exit(-1).asInstanceOf[Nothing])
   }
