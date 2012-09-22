@@ -1,6 +1,10 @@
-logs
-project/project
-project/target
-target
-tmp
+logs/
+project/project/target/
+project/target/
+target/
+tmp/
+.target/
+.classpath
+.settings/
+.project
 .history
