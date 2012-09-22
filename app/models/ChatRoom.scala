@@ -12,7 +12,7 @@ import akka.util.Timeout
 import akka.pattern.ask
 
 import play.api.Play.current
-//import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.execution.defaultContext
 
 object Robot {
 
@@ -32,7 +32,7 @@ object Robot {
     // Make the robot talk every 30 seconds
     Akka.system.scheduler.schedule(
       2 seconds,
-      5 seconds,
+      3 seconds,
       chatRoom,
       Talk("Robot", "I'm still alive"))
   }
@@ -43,7 +43,14 @@ object ChatRoom {
 
   implicit val timeout = Timeout(1 second)
 
-  lazy val default = Akka.system.actorOf(Props[ChatRoom])
+  lazy val default = {
+    val roomActor = Akka.system.actorOf(Props[ChatRoom])
+
+    // Create a bot user (just for fun)
+    Robot(roomActor)
+
+    roomActor
+  }
 
   def join(username: String): Promise[(Iteratee[JsValue, _], Enumerator[JsValue])] = {
     (default ? Join(username)).asPromise.map {
@@ -91,6 +98,11 @@ class ChatRoom extends Actor {
       }
     }
 
+    case HtmlText(username, text) => {
+      println(text.toString)
+      notifyAll("htmlText", username, text)
+    }
+
     case Join(username) => {
       // Create an Enumerator to write to this socket
       val channel = Enumerator.imperative[JsValue](onStart = () => self ! NotifyJoin(username))
@@ -103,14 +115,17 @@ class ChatRoom extends Actor {
       }
     }
 
+    case NotifyJoin(username) => {
+      notifyAll("join", username, "has entered the room")
+    }
+
+    case Talk(username, text) => {
+      notifyAll("talk", username, text)
+    }
+
     case Quit(username) => {
       members = members - username
       notifyAll("quit", username, "has leaved the room")
-    }
-
-    case HtmlText(username, text) => {
-      println(text.toString)
-      notifyAll("htmlText", username, text)
     }
 
   }
@@ -120,7 +135,9 @@ class ChatRoom extends Actor {
       Seq(
         "kind" -> JsString(kind),
         "user" -> JsString(user),
-        "message" -> JsString(text)))
+        "message" -> JsString(text),
+        "members" -> JsArray(
+          members.keySet.toList.map(JsString))))
     members.foreach {
       case (_, channel) => channel.push(msg)
     }
@@ -133,7 +150,6 @@ case class HtmlText(username: String, text: String)
 
 case class Join(username: String)
 case class Quit(username: String)
-
 case class Talk(username: String, text: String)
 case class NotifyJoin(username: String)
 
