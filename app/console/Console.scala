@@ -32,7 +32,7 @@ object Console {
   private var lock: AnyRef = new Object();
 
   private val nettyServer = {
-    val app = Option(System.getProperty("user.dir")).map(new File(_)).filter(p => p.exists && p.isDirectory).flatMap { applicationPath =>
+    val app = Option(System.getProperty("user.dir")).map(x => new File(x + "/project")).filter(p => p.exists && p.isDirectory).flatMap { applicationPath =>
       NettyServer2.createServer(applicationPath)
     }
     app.getOrElse(System.exit(-1).asInstanceOf[Nothing])

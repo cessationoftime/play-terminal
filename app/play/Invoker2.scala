@@ -395,24 +395,12 @@ akka {
   }
 }
     """)
-  def apply() = play.withFallback(actor)
+
 }
 
 /**
  * holds Play's internal invokers
  */
-class Invoker2(applicationProvider: Option[ApplicationProvider] = None) extends _root_.play.core.Invoker {
-
-  override val system: ActorSystem = applicationProvider.map { a =>
-    appProviderActorSystem(a)
-  }.getOrElse(ActorSystem("play"))
-
-  private def appProviderActorSystem(applicationProvider: ApplicationProvider) = {
-    val conf = play.api.Play.maybeApplication.filter(_.mode == Mode.Prod).map(app =>
-      ConfigFactory.load()).get
-
-    ActorSystem("play", conf.withFallback(InvokerConfig()).getConfig("play"))
-  }
-
-}
-
+class Invoker2(applicationProvider: Option[ApplicationProvider] = None) extends {
+  override val system: ActorSystem = ActorSystem("play", InvokerConfig.play.getConfig("play").withFallback(InvokerConfig.actor))
+} with _root_.play.core.Invoker(applicationProvider)
