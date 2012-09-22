@@ -8,7 +8,8 @@ object ApplicationBuild extends Build {
     val appVersion      = "1.0"
 
     val appDependencies = Seq(
-      // Add your project dependencies here,
+              // Add your project dependencies here,
+        "org.fusesource.jansi" % "jansi" % "1.9"
     )
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(

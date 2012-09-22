@@ -3,7 +3,7 @@ util.toArray = function(list) {
   return Array.prototype.slice.call(list || [], 0);
 };
 
-var Terminal = Terminal || function(cmdLineContainer, outputContainer, chatSocket) {
+var Terminal = Terminal || function(cmdLineContainer, outputContainer, actorSocket) {
   window.URL = window.URL || window.webkitURL;
   window.requestFileSystem = window.requestFileSystem ||
                              window.webkitRequestFileSystem;
@@ -102,7 +102,9 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer, chatSocke
         var cmd = args[0].toLowerCase();
         args = args.splice(1); // Remove cmd from arg list.
       }
-      chatSocket.send(JSON.stringify({text: cmd}));
+      
+      actorSocket.send(JSON.stringify({text: cmd}));
+      
       switch (cmd) {
         case 'cat':
           var fileName = args.join(' ');
