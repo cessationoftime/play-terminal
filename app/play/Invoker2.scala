@@ -126,7 +126,7 @@ akka {
 
   actor {
 
-    provider = "akka.actor.LocalActorRefProvider"
+    provider = "akka.actor.TerminalActorRefProvider"
 
     # Timeout for ActorSystem.actorOf
     creation-timeout = 20s
