@@ -1,12 +1,8 @@
-package playterminal.core
+package play.core.server
 
-import play.core.server.NettyServer
 import java.io.FileOutputStream
-import java.io.File
 import play.core.StaticApplication
-import play.core.ApplicationProvider
-import play.core.Invoker
-import play.api.Mode
+import java.io.File
 
 object NettyServer2 {
 
@@ -40,8 +36,10 @@ object NettyServer2 {
     try {
       val appProvider = new StaticApplication(applicationPath);
       val server = new {
-        override val invoker = new playterminal.core.Invoker(Some(appProvider), classLoader)
-      } with NettyServer(
+
+        override val invoker = new playterminal.core.Invoker2(Some(appProvider), classLoader);
+
+      } with play.core.server.NettyServer(
         appProvider,
         Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000),
         Option(System.getProperty("https.port")).map(Integer.parseInt(_)),

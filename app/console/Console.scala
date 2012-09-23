@@ -21,7 +21,7 @@ import java.io.PrintStream
 
 import org.fusesource.jansi.internal.CLibrary.isatty
 
-import playterminal.core.NettyServer2
+import play.core.server.NettyServer2
 
 object Console extends Console
 class Console(classLoader: Option[ClassLoader]) {
