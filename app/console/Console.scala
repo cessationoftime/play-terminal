@@ -15,23 +15,20 @@
  * limitations under the License.
  */
 package console
-import org.fusesource.jansi.internal.CLibrary.STDOUT_FILENO
-import org.fusesource.jansi.internal.CLibrary.isatty
-import java.io.FilterOutputStream
-import java.io.IOException
-import java.io.OutputStream
-import java.io.PrintStream
-import scala.util.Properties
-import org.fusesource.jansi.AnsiOutputStream
-import org.fusesource.jansi.WindowsAnsiOutputStream
+
 import java.io.File
+import java.io.PrintStream
+
+import org.fusesource.jansi.internal.CLibrary.isatty
+
 import playterminal.core.NettyServer2
 
-object Console {
+object Console extends Console
+class Console {
   private var installed = 0;
   private var lock: AnyRef = new Object();
 
-  private val nettyServer = {
+  protected val nettyServer = {
     val app = Option(System.getProperty("user.dir")).map(x => new File(x + "/project")).filter(p => p.exists && p.isDirectory).flatMap { applicationPath =>
       NettyServer2.createServer(applicationPath)
     }
@@ -88,3 +85,16 @@ object Console {
   }
 
 }
+
+/**
+ * used for injecting a custom classLoader into Akka.
+ * This enables Akka to dynamicly load configs and classes properly when running inside an SBT plugin (or similar environments)
+ */
+class ConsoleWithClassLoader(classLoader: ClassLoader) extends {
+  override protected val nettyServer = {
+    val app = Option(System.getProperty("user.dir")).map(x => new File(x + "/project")).filter(p => p.exists && p.isDirectory).flatMap { applicationPath =>
+      NettyServer2.createServer(applicationPath, Some(classLoader))
+    }
+    app.getOrElse(System.exit(-1).asInstanceOf[Nothing])
+  }
+} with Console

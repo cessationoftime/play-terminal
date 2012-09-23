@@ -14,7 +14,7 @@ object NettyServer2 {
    * creates a NettyServer based on the application represented by applicationPath
    * @param applicationPath path to application
    */
-  def createServer(applicationPath: File): Option[NettyServer] = {
+  def createServer(applicationPath: File, classLoader: Option[ClassLoader] = None): Option[NettyServer] = {
     // Manage RUNNING_PID file
     java.lang.management.ManagementFactory.getRuntimeMXBean.getName.split('@').headOption.map { pid =>
       val pidFile = Option(System.getProperty("pidfile.path")).map(new File(_)).getOrElse(new File(applicationPath.getAbsolutePath, "RUNNING_PID"))
@@ -40,7 +40,7 @@ object NettyServer2 {
     try {
       val appProvider = new StaticApplication(applicationPath);
       val server = new {
-        override val invoker = new Invoker2(Some(appProvider))
+        override val invoker = new Invoker2(Some(appProvider), classLoader)
       } with NettyServer(
         appProvider,
         Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000),

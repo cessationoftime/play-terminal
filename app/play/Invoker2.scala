@@ -401,6 +401,12 @@ akka {
 /**
  * holds Play's internal invokers
  */
-class Invoker2(applicationProvider: Option[ApplicationProvider] = None) extends {
-  override val system: ActorSystem = ActorSystem("play", InvokerConfig.play.getConfig("play").withFallback(InvokerConfig.actor))
+class Invoker2(applicationProvider: Option[ApplicationProvider], classLoader: Option[ClassLoader]) extends {
+  override val system: ActorSystem = {
+    classLoader match {
+      case Some(s) => ActorSystem("play", InvokerConfig.play.getConfig("play").withFallback(ConfigFactory.defaultReference(s)))
+      case None => ActorSystem("play", InvokerConfig.play.getConfig("play").withFallback(InvokerConfig.actor))
+    }
+
+  }
 } with _root_.play.core.Invoker(applicationProvider)
