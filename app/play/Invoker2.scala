@@ -81,12 +81,30 @@ object InvokerConfig {
 /**
  * holds Play's internal invokers
  */
-class Invoker2(applicationProvider: Option[ApplicationProvider], classLoader: Option[ClassLoader]) extends {
-  override val system: ActorSystem = {
+class Invoker(applicationProvider: Option[ApplicationProvider], classLoader: Option[ClassLoader]) {
+
+  //   override val system: ActorSystem = {
+  //    classLoader match {
+  //      case Some(cl) => ActorSystem("play", ConfigFactory.defaultReference(cl).getConfig("play"), cl)
+  //      case None => ActorSystem("play", ConfigFactory.load().getConfig("play"))
+  //    }
+  //
+  //  }
+
+  val system: ActorSystem = {
     classLoader match {
       case Some(cl) => ActorSystem("play", InvokerConfig.play.getConfig("play"), cl)
       case None => ActorSystem("play", InvokerConfig.play.getConfig("play"))
     }
 
   }
-} with _root_.play.core.Invoker(applicationProvider)
+
+  /**
+   * kills actor system
+   */
+  def stop(): Unit = {
+    system.shutdown()
+    system.awaitTermination()
+  }
+
+}

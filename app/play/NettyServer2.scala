@@ -40,7 +40,7 @@ object NettyServer2 {
     try {
       val appProvider = new StaticApplication(applicationPath);
       val server = new {
-        override val invoker = new Invoker2(Some(appProvider), classLoader)
+        override val invoker = new playterminal.core.Invoker(Some(appProvider), classLoader)
       } with NettyServer(
         appProvider,
         Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000),
