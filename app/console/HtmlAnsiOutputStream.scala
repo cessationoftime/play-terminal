@@ -20,15 +20,18 @@ import scala.collection.JavaConversions._
 import java.io.IOException
 import java.io.OutputStream
 import org.fusesource.jansi.AnsiOutputStream
+import models.ChatRoom
+import models.HtmlText
+import models.Text
 object HtmlAnsiOutputStream {
 
   private[console] val ANSI_COLOR_MAP = Array("black", "red",
     "green", "yellow", "blue", "magenta", "cyan", "white");
 
-  private[console] val BYTES_QUOT = "&quot;".getBytes();
-  private[console] val BYTES_AMP = "&amp;".getBytes();
-  private[console] val BYTES_LT = "&lt;".getBytes();
-  private[console] val BYTES_GT = "&gt;".getBytes();
+  private[console] val BYTES_QUOT = "&quot;" //.getBytes();
+  private[console] val BYTES_AMP = "&amp;" //.getBytes();
+  private[console] val BYTES_LT = "&lt;" //.getBytes();
+  private[console] val BYTES_GT = "&gt;" //.getBytes();
 
   private[console] val ATTRIBUTE_INTENSITY_BOLD = 1; // 	Intensity: Bold 	
   private[console] val ATTRIBUTE_INTENSITY_FAINT = 2; // 	Intensity; Faint 	not widely supported
@@ -62,6 +65,11 @@ object HtmlAnsiOutputStream {
   private[console] val ERASE_LINE_TO_BEGINING = 1;
   private[console] val ERASE_LINE = 2;
 }
+
+case class HtmlTag(name: String, attribute: String = "") {
+  def startTag = "<" + name + " " + attribute + ">"
+  def endTag = "</" + name + ">"
+}
 /**
  * @author <a href="http://code.dblock.org">Daniel Doubrovkine</a>
  */
@@ -71,55 +79,67 @@ class HtmlAnsiOutputStream(os: OutputStream) extends AnsiOutputStream(os) {
 
   @throws(classOf[IOException])
   override def close() = {
-    closeAttributes();
+    closeTags;
     super.close();
   }
 
-  private val closingAttributes: java.util.List[String] = new java.util.ArrayList[String]();
+  private val closingAttributes = collection.mutable.Stack.empty[HtmlTag];
+
+  def apply(html: String) {
+    ChatRoom.default ! HtmlText("PlayOutputStream", html)
+  }
+
+  def apply(data: Char) {
+    ChatRoom.default ! Text("PlayOutputStream", data)
+  }
+  def apply(data: Int) {
+    apply(data.toChar)
+  }
 
   @throws(classOf[IOException])
-  private def write(s: String) = {
+  private def write(s: String): Unit = {
+    apply(s);
     out.write(s.getBytes());
   }
 
   @throws(classOf[IOException])
-  private def writeAttribute(s: String): Unit = {
-    write("<" + s + ">");
-    closingAttributes.add(0, s.split(" ", 2)(0));
+  private def writeTag(s: HtmlTag): Unit = {
+    apply(s.startTag);
+    closingAttributes.push(s);
   }
 
   @throws(classOf[IOException])
-  private def closeAttributes(): Unit = {
-    for (attr <- closingAttributes) {
-      write("</" + attr + ">");
+  private def closeTags: Unit =
+    while (!closingAttributes.isEmpty) {
+      apply(closingAttributes.pop.endTag);
     }
-    closingAttributes.clear();
-  }
 
   @throws(classOf[IOException])
   override def write(data: Int): Unit = data match {
-    case 34 => out.write(BYTES_QUOT); // "
-    case 38 => out.write(BYTES_AMP); // &			
-    case 60 => out.write(BYTES_LT); // <
-    case 62 => out.write(BYTES_GT); // >
-    case _ => super.write(data);
+    case 34 => write(BYTES_QUOT); // "
+    case 38 => write(BYTES_AMP); // &			
+    case 60 => write(BYTES_LT); // <
+    case 62 => write(BYTES_GT); // >
+    case _ =>
+      apply(data)
+      super.write(data);
   }
 
   @throws(classOf[IOException])
   def writeLine(buf: Array[Byte], offset: Int, len: Int): Unit = {
     write(buf, offset, len);
-    closeAttributes();
+    closeTags;
   }
 
   @throws(classOf[IOException])
   protected override def processSetAttribute(attribute: Int): Unit = attribute match {
     case ATTRIBUTE_CONCEAL_ON =>
-      write("\u001B[8m");
+      // write("\u001B[8m");
       concealOn = true;
-    case ATTRIBUTE_INTENSITY_BOLD => writeAttribute("b");
-    case ATTRIBUTE_INTENSITY_NORMAL => closeAttributes();
-    case ATTRIBUTE_UNDERLINE => writeAttribute("u");
-    case ATTRIBUTE_UNDERLINE_OFF => closeAttributes();
+    case ATTRIBUTE_INTENSITY_BOLD => writeTag(HtmlTag("b"));
+    case ATTRIBUTE_INTENSITY_NORMAL => closeTags;
+    case ATTRIBUTE_UNDERLINE => writeTag(HtmlTag("u"));
+    case ATTRIBUTE_UNDERLINE_OFF => closeTags;
     case ATTRIBUTE_NEGATIVE_ON =>
     case ATTRIBUTE_NEGATIVE_Off =>
   }
@@ -127,18 +147,18 @@ class HtmlAnsiOutputStream(os: OutputStream) extends AnsiOutputStream(os) {
   @throws(classOf[IOException])
   protected override def processAttributeRest(): Unit = {
     if (concealOn) {
-      write("\u001B[0m");
+      // write("\u001B[0m");
       concealOn = false;
     }
-    closeAttributes();
+    closeTags;
   }
 
   @throws(classOf[IOException])
   protected override def processSetForegroundColor(color: Int): Unit =
-    writeAttribute("span style=\"color: " + ANSI_COLOR_MAP(color) + ";\"");
+    writeTag(HtmlTag("span", """style="color: """ + ANSI_COLOR_MAP(color) + ";\""));
 
   @throws(classOf[IOException])
   protected override def processSetBackgroundColor(color: Int): Unit =
-    writeAttribute("span style=\"background-color: " + ANSI_COLOR_MAP(color) + ";\"");
+    writeTag(HtmlTag("span", """style="background-color: """ + ANSI_COLOR_MAP(color) + ";\""))
 
 }

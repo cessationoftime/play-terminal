@@ -38,7 +38,7 @@ class Console(classLoader: Option[ClassLoader]) {
   }
 
   val system_out = System.out;
-  val html_out = new PlayOutputStream(system_out)
+  val html_out = new HtmlAnsiOutputStream(system_out)
   /**
    * If the standard out natively supports ANSI escape codes, then this just
    * returns System.out, otherwise it will provide an ANSI aware PrintStream
@@ -50,7 +50,7 @@ class Console(classLoader: Option[ClassLoader]) {
   val out = new PrintStream(html_out);
 
   val system_err = System.err;
-  val html_err = new PlayOutputStream(system_err)
+  val html_err = new HtmlAnsiOutputStream(system_err)
   /**
    * If the standard out natively supports ANSI escape codes, then this just
    * returns System.err, otherwise it will provide an ANSI aware PrintStream
