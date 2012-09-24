@@ -2,55 +2,48 @@ package models
 
 import akka.actor._
 import akka.util.duration._
-
 import play.api._
 import play.api.libs.json._
 import play.api.libs.iteratee._
 import play.api.libs.concurrent._
-
 import akka.util.Timeout
 import akka.pattern.ask
-
 import play.api.Play.current
 import play.api.libs.concurrent.execution.defaultContext
+import java.io.PipedInputStream
+import java.io.PipedOutputStream
+import console.ConsoleChatRoom
 
-object Robot {
-
-  def apply(chatRoom: ActorRef) {
-
-    // Create an Iteratee that log all messages to the console.
-    val loggerIteratee = Iteratee.foreach[JsValue](event => Logger("robot").info(event.toString))
-
-    implicit val timeout = Timeout(1 second)
-    // Make the robot join the room
-    chatRoom ? (Join("Robot")) map {
-      case Connected(robotChannel) =>
-        // Apply this Enumerator on the logger.
-        robotChannel |>> loggerIteratee
-    }
-
-    // Make the robot talk every 30 seconds
-    Akka.system.scheduler.schedule(
-      2 seconds,
-      3 seconds,
-      chatRoom,
-      Talk("Robot", "I'm still alive"))
-  }
-
-}
+//object Robot {
+//
+//  def apply(chatRoom: ActorRef) {
+//
+//    // Create an Iteratee that log all messages to the console.
+//    val loggerIteratee = Iteratee.foreach[JsValue](event => Logger("robot").info(event.toString))
+//
+//    implicit val timeout = Timeout(1 second)
+//    // Make the robot join the room
+//    chatRoom ? (Join("Robot")) map {
+//      case Connected(robotChannel) =>
+//        // Apply this Enumerator on the logger.
+//        robotChannel |>> loggerIteratee
+//    }
+//
+//        // Make the robot talk every 30 seconds
+//        Akka.system.scheduler.schedule(
+//          2 seconds,
+//          3 seconds,
+//          chatRoom,
+//          Talk("Robot", "I'm still alive"))
+//  }
+//
+//}
 
 object ChatRoom {
 
   implicit val timeout = Timeout(1 second)
 
-  lazy val default = {
-    val roomActor = Akka.system.actorOf(Props[ChatRoom])
-
-    // Create a bot user (just for fun)
-    Robot(roomActor)
-
-    roomActor
-  }
+  lazy val default = Akka.system.actorOf(Props(new ChatRoom(ConsoleChatRoom.pipe)))
 
   def join(username: String): Promise[(Iteratee[JsValue, _], Enumerator[JsValue])] = {
     (default ? Join(username)).asPromise.map {
@@ -59,7 +52,7 @@ object ChatRoom {
 
         // Create an Iteratee to consume the feed
         val iteratee = Iteratee.foreach[JsValue] { event =>
-          default ! Talk(username, (event \ "text").as[String])
+          default ! SendSbtCommand(username, (event \ "text").as[String])
         }.mapDone { _ =>
           default ! Quit(username)
         }
@@ -84,12 +77,14 @@ object ChatRoom {
 
 }
 
-class ChatRoom extends Actor {
+class ChatRoom(terminalWriter: PipedOutputStream) extends Actor {
 
   var members = Map.empty[String, PushEnumerator[JsValue]]
 
   def receive = {
-
+    case SendSbtCommand(username, text) => // terminalWriter.write(text.getBytes("UTF-8"))
+      println("print out:   " + text)
+      terminalWriter.write(text.getBytes())
     case Text(username, text) => {
       if (text == '\n') {
         notifyAll("text", username, "<br />")
@@ -99,7 +94,6 @@ class ChatRoom extends Actor {
     }
 
     case HtmlText(username, text) => {
-      println(text.toString)
       notifyAll("htmlText", username, text)
     }
 
@@ -147,6 +141,7 @@ class ChatRoom extends Actor {
 
 case class Text(username: String, text: Char)
 case class HtmlText(username: String, text: String)
+case class SendSbtCommand(username: String, sbtCommand: String)
 
 case class Join(username: String)
 case class Quit(username: String)

@@ -18,12 +18,18 @@ package console
 
 import java.io.File
 import java.io.PrintStream
-
 import org.fusesource.jansi.internal.CLibrary.isatty
-
 import play.core.server.NettyServer2
+import java.io.ByteArrayInputStream
+import java.io.PipedInputStream
+import java.io.PipedOutputStream
+import java.io.FileDescriptor
 
 object Console extends Console
+
+object ConsoleChatRoom {
+  var pipe: PipedOutputStream = null
+}
 class Console(classLoader: Option[ClassLoader]) {
   def this(classLoader: ClassLoader) = this(Some(classLoader))
   def this() = this(None)
@@ -51,6 +57,7 @@ class Console(classLoader: Option[ClassLoader]) {
 
   val system_err = System.err;
   val html_err = new HtmlAnsiOutputStream(system_err)
+
   /**
    * If the standard out natively supports ANSI escape codes, then this just
    * returns System.err, otherwise it will provide an ANSI aware PrintStream
@@ -61,12 +68,20 @@ class Console(classLoader: Option[ClassLoader]) {
    */
   val err = new PrintStream(html_err);
 
+  val system_in = System.in
+
+  val in = new PipedInputStream()
+
+  //write to this to send command to SBT
+  ConsoleChatRoom.pipe = new PipedOutputStream(in)
+
   /**
    * Install Console.out to System.out.
    */
   def systemInstall(): Unit = lock.synchronized {
     installed += 1;
     if (installed == 1) {
+      System.setIn(in)
       System.setOut(out);
       System.setErr(err);
     }
@@ -80,6 +95,7 @@ class Console(classLoader: Option[ClassLoader]) {
   def systemUninstall(): Unit = lock.synchronized {
     installed -= 1;
     if (installed == 0) {
+      System.setIn(system_in)
       System.setOut(system_out);
       System.setErr(system_err);
       nettyServer.stop()

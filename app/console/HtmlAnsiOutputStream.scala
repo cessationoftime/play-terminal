@@ -115,14 +115,15 @@ class HtmlAnsiOutputStream(os: OutputStream) extends AnsiOutputStream(os) {
     }
 
   @throws(classOf[IOException])
-  override def write(data: Int): Unit = data match {
-    case 34 => write(BYTES_QUOT); // "
-    case 38 => write(BYTES_AMP); // &			
-    case 60 => write(BYTES_LT); // <
-    case 62 => write(BYTES_GT); // >
-    case _ =>
-      apply(data)
-      super.write(data);
+  override def write(data: Int): Unit = {
+    data match {
+      case 34 => apply(BYTES_QUOT); // "
+      case 38 => apply(BYTES_AMP); // &			
+      case 60 => apply(BYTES_LT); // <
+      case 62 => apply(BYTES_GT); // >
+      case _ => apply(data)
+    }
+    out.write(data);
   }
 
   @throws(classOf[IOException])
