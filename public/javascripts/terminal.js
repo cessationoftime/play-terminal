@@ -103,7 +103,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer, actorSock
         args = args.splice(1); // Remove cmd from arg list.
       }
       
-      actorSocket.send(JSON.stringify({text: cmd}));
+     
       
       switch (cmd) {
         case 'cat':
@@ -129,6 +129,8 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer, actorSock
         case 'help':
           output('<div class="ls-files">' + CMDS_.join('<br>') + '</div>');
           output('<p>Add files by dragging them from your desktop.</p>');
+          output('<hr />');
+          actorSocket.send(JSON.stringify({text: cmd}));
           break;
         case 'ls':
           ls_(function(entries) {
@@ -316,11 +318,11 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer, actorSock
           break;
         case 'who':
           output(document.title +
-                 ' - By: Eric Bidelman &lt;ericbidelman@chromium.org&gt;');
+                 ' - By: Eric Bidelman &lt;ericbidelman@chromium.org&gt <br /> - Modified for use with SBT by Chris Van Vranken &lt;chris@psyonik.com&gt;');
           break;
         default:
           if (cmd) {
-            output(cmd + ': command not found');
+        	  actorSocket.send(JSON.stringify({text: cmd}));
           }
       };
 

@@ -27,16 +27,13 @@ import java.io.FileDescriptor
 
 object Console extends Console
 
-object ConsoleChatRoom {
-  var pipe: PipedOutputStream = null
-}
 class Console(classLoader: Option[ClassLoader]) {
   def this(classLoader: ClassLoader) = this(Some(classLoader))
   def this() = this(None)
   private var installed = 0;
   private var lock: AnyRef = new Object();
 
-  protected val nettyServer = {
+  val nettyServer = {
     val app = Option(System.getProperty("user.dir")).map(x => new File(x + "/project")).filter(p => p.exists && p.isDirectory).flatMap { applicationPath =>
       NettyServer2.createServer(applicationPath, classLoader)
     }
@@ -45,6 +42,7 @@ class Console(classLoader: Option[ClassLoader]) {
 
   val system_out = System.out;
   val html_out = new HtmlAnsiOutputStream(system_out)
+
   /**
    * If the standard out natively supports ANSI escape codes, then this just
    * returns System.out, otherwise it will provide an ANSI aware PrintStream
@@ -68,20 +66,12 @@ class Console(classLoader: Option[ClassLoader]) {
    */
   val err = new PrintStream(html_err);
 
-  val system_in = System.in
-
-  val in = new PipedInputStream()
-
-  //write to this to send command to SBT
-  ConsoleChatRoom.pipe = new PipedOutputStream(in)
-
   /**
    * Install Console.out to System.out.
    */
   def systemInstall(): Unit = lock.synchronized {
     installed += 1;
     if (installed == 1) {
-      System.setIn(in)
       System.setOut(out);
       System.setErr(err);
     }
@@ -95,7 +85,6 @@ class Console(classLoader: Option[ClassLoader]) {
   def systemUninstall(): Unit = lock.synchronized {
     installed -= 1;
     if (installed == 0) {
-      System.setIn(system_in)
       System.setOut(system_out);
       System.setErr(system_err);
       nettyServer.stop()

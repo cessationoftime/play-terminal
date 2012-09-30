@@ -12,7 +12,6 @@ import play.api.Play.current
 import play.api.libs.concurrent.execution.defaultContext
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
-import console.ConsoleChatRoom
 
 //object Robot {
 //
@@ -43,7 +42,7 @@ object ChatRoom {
 
   implicit val timeout = Timeout(1 second)
 
-  lazy val default = Akka.system.actorOf(Props(new ChatRoom(ConsoleChatRoom.pipe)))
+  lazy val default = Akka.system.actorOf(Props[ChatRoom])
 
   def join(username: String): Promise[(Iteratee[JsValue, _], Enumerator[JsValue])] = {
     (default ? Join(username)).asPromise.map {
@@ -77,14 +76,15 @@ object ChatRoom {
 
 }
 
-class ChatRoom(terminalWriter: PipedOutputStream) extends Actor {
+class ChatRoom extends Actor {
 
   var members = Map.empty[String, PushEnumerator[JsValue]]
-
+  var sbtInput: Option[ActorRef] = None
   def receive = {
+    case NeedInput =>
+      sbtInput = Some(sender)
     case SendSbtCommand(username, text) => // terminalWriter.write(text.getBytes("UTF-8"))
-      println("print out:   " + text)
-      terminalWriter.write(text.getBytes())
+      sbtInput foreach { _ ! text }
     case Text(username, text) => {
       if (text == '\n') {
         notifyAll("text", username, "<br />")
@@ -142,7 +142,7 @@ class ChatRoom(terminalWriter: PipedOutputStream) extends Actor {
 case class Text(username: String, text: Char)
 case class HtmlText(username: String, text: String)
 case class SendSbtCommand(username: String, sbtCommand: String)
-
+case object NeedInput
 case class Join(username: String)
 case class Quit(username: String)
 case class Talk(username: String, text: String)
